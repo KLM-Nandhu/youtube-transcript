@@ -1,5 +1,4 @@
 import streamlit as st
-from youtube_transcript_api import YouTubeTranscriptApi
 from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
