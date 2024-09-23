@@ -1,5 +1,5 @@
-streamlit
-youtube_transcript_api
-python-docx
-pytube
-reportlab
+streamlit==1.29.0
+youtube_transcript_api==0.6.1
+python-docx==1.0.1
+pytube==15.0.0
+reportlab==4.0.8
