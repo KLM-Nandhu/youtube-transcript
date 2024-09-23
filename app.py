@@ -5,13 +5,11 @@ from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from pytube import YouTube
 import re
-import os
-import base64
+import io
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
-import io
 
 # Custom CSS for buttons, text, background, and animation
 st.markdown("""
@@ -133,8 +131,6 @@ def save_transcript_to_word_and_pdf(video_id):
         return transcript, None, None
     
     safe_title = sanitize_filename(title)
-    output_file_docx = f"{safe_title}.docx"
-    output_file_pdf = f"{safe_title}.pdf"
     
     # Create Word document
     doc = Document()
@@ -170,10 +166,16 @@ def save_transcript_to_word_and_pdf(video_id):
         pdf_content.append(Paragraph(entry['text'], styles['Left']))
         pdf_content.append(Spacer(1, 6))
     
-    doc.save(output_file_docx)
-    pdf.build(pdf_content)
+    # Save Word document to memory
+    docx_buffer = io.BytesIO()
+    doc.save(docx_buffer)
+    docx_buffer.seek(0)
     
-    return "Transcript saved", output_file_docx, pdf_buffer
+    # Build PDF
+    pdf.build(pdf_content)
+    pdf_buffer.seek(0)
+    
+    return "Transcript saved", docx_buffer, pdf_buffer
 
 # Streamlit app
 st.markdown('<div class="title-container"><h1>YouTube Transcript</h1></div>', unsafe_allow_html=True)
@@ -197,29 +199,26 @@ with col2:
     if st.button("Generate Transcript", key="generate_button"):
         if video_id:
             with st.spinner("Generating transcript..."):
-                result, output_file_docx, pdf_buffer = save_transcript_to_word_and_pdf(video_id)
+                result, docx_buffer, pdf_buffer = save_transcript_to_word_and_pdf(video_id)
             
-            if output_file_docx and pdf_buffer:
+            if docx_buffer and pdf_buffer:
                 st.success("Transcript generated successfully!")
                 download_col1, download_col2 = st.columns(2)
                 
                 with download_col1:
-                    with open(output_file_docx, "rb") as file:
-                        docx_bytes = file.read()
-                        st.download_button(
-                            label="Download as Word",
-                            data=docx_bytes,
-                            file_name=os.path.basename(output_file_docx),
-                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                            key="download_word"
-                        )
+                    st.download_button(
+                        label="Download as Word",
+                        data=docx_buffer.getvalue(),
+                        file_name=f"{sanitize_filename(title)}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        key="download_word"
+                    )
                 
                 with download_col2:
-                    pdf_bytes = pdf_buffer.getvalue()
                     st.download_button(
                         label="Download as PDF",
-                        data=pdf_bytes,
-                        file_name=os.path.basename(output_file_docx).replace('.docx', '.pdf'),
+                        data=pdf_buffer.getvalue(),
+                        file_name=f"{sanitize_filename(title)}.pdf",
                         mime="application/pdf",
                         key="download_pdf"
                     )
